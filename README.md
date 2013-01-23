@@ -7,7 +7,7 @@ help you run multiple assemblies with differe parameters, and visualize the resu
 
 <!-- You can use this experiment sheet to keep track of your tasks, and your results in the same place.
 using ipython notebook this is possible. Also, an advantage of using is that you can put your experiment sheet
-under source control and track the history of your experiment. -->
+under source control and track the history of your work. -->
 
 ## Requirement
 1. [ipython notebook][3]

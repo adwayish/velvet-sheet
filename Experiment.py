@@ -32,10 +32,9 @@ conf['ls']= [mkname(k,cv) for k in conf['k'] for cv in conf['cvCut']]
 
 # <codecell>
 
-!pwd
-!ls
+# clean
 for f in conf['ls']:
-    !rm -rf $f
+    !rm -rf {f}
 
 # <codecell>
 
@@ -60,14 +59,16 @@ Collect Data files into dataframe with the following columns
 k cvCut n50 totalLgth contigs_ls_2 mean max min
 """
 def collect(f):
+    """
+    recieve a file path, returns a row of the required information.
+    """
     stats = pd.read_table('/'.join([f,"stats.txt"]))
-    minLgth = stats['lgth'].min()
-    maxLgth = stats['lgth'].max()
-    meanLgth= stats['lgth'].mean()
-    medianLgth=stats['lgth'].median()
+    sumLgth = (stats['lgth'] + (conf['k']-1)).sum()
+    minLgth = (stats['lgth'] + (conf['k']-1)).min()
+    maxLgth = (stats['lgth'] + (conf['k']-1)).max()
+    meanLgth= (stats['lgth'] + (conf['k']-1)).mean()
+    medianLgth=(stats['lgth'] + (conf['k']-1)).median()
+    [sumLgth,minLgth,maxLgth,meanLgth,medianLgth]
     
-for f in conf['ls']:
-    plt.figure()
-   
-    stats[stats['lgth'] > 5000][['lgth','short1_cov']].hist()
+    
 
