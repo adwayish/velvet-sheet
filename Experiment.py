@@ -3,8 +3,8 @@
 
 # <codecell>
 
+from pandas import DataFrame
 import pandas as pd
-from collections import namedtuple
 
 # <markdowncell>
 
@@ -20,25 +20,33 @@ from collections import namedtuple
 # refer to vlevlet manual for more details. 
 ###
 
-class Experiment: pass
-ex = Experiment()
-ex.kmers = [1,2,3,4] 
-ex.cvCut  = [8,10]   
-ex.expCov = map(lambda(x): x*2,ex.cvCut)
-ex.output = "output"
-ex.seq = "EClen60cov20.fna"
+class Config: pass
+cf = Config()
+cf.kmers = [15,21,27,31] 
+cf.cvCuts  = [5,10,15]   
+cf.expCov = map(lambda(x): x*2,cf.cvCuts)
+cf.output = "data"
+cf.seq = "EClen60cov20.fna"
 
-def mkname(k,cvCut): return '_'.join([ex.output,str(k),str(cvCut)]) 
+def mkname(k,cvCut): return '_'.join([cf.output +'/',str(k),str(cvCut)])
 
-# build the iteration list
-Iteration = namedtuple('Iteration','kmer cvCut dirname')
-ex.iterations =[Iteration(kmer,cvCut,mkname(kmer,cvCut)) for kmer in ex.kmers for cvCut in ex.cvCut]
+# <codecell>
+
+def init(conf):
+    return DataFrame([(
+                       kmer,
+                       cvCut,
+                       mkname(kmer,cvCut)
+                       ) for kmer in conf.kmers for cvCut in conf.cvCuts],
+                       columns=['kmer','cvCut','dirname'])
+
+exp = init(cf)
 
 # <codecell>
 
 # clean
-for f in ex.dirs:
-    !rm -rf {f}
+!rm -rf {cf.output}
+!mkdir {cf.output}
 
 # <codecell>
 
@@ -47,13 +55,13 @@ Run the main rotuin to generate data files
 this include runing velvet binaries (vleveth and vlevetg) 
 for conf[k] x conf[cvCut] times.
 """
-for k in ex.kmers: 
-    !velveth {ex.output} {str(k)} -short {ex.seq};
-    for cvCut in ex.cvCut:
+for k in exp.kmer: 
+    !velveth temp {str(k)} -short {cf.seq};
+    for cvCut in exp.cvCut:
         f = mkname(k,cvCut)
-        !cp -R {ex.output} {f}
+        !cp -R temp {f}
         !velvetg {f} -cov_cutoff {str(cvCut)};
-    !rm -rf {ex.output}
+    !rm -rf temp
 
 # <codecell>
 
@@ -61,16 +69,23 @@ for k in ex.kmers:
 Collect data from files into dataframe has the following columns
 k cvCut n50 totalLgth contigs_ls_2 mean max min
 """
-def collect(f,kmer):
+
+def collect(info):
     """
     recieve a file path, returns a row of the required information.
     """
-    stats = pd.read_table('/'.join([f,"stats.txt"]))
-    stats['lgth'] = (stats['lgth'] + (kmer-1))
-    sumLgth = stats['lgth'].sum()
-    minLgth = stats['lgth'].min()
-    maxLgth = stats['lgth'].max()
-    meanLgth= stats['lgth'].mean()
-    medianLgth=stats['lgth'].median()
-    [sumLgth,minLgth,maxLgth,meanLgth,medianLgth] 
+    stats = pd.read_table('/'.join([info['dirname'],"stats.txt"]))
+    lgth = (stats['lgth'].order(ascending=False) + (info['kmer']-1))
+    return (info['kmer'],
+            info['cvCut'],
+            lgth.sum(),
+            lgth.min(),
+            lgth.max(),
+            lgth.mean(),
+            lgth.median(),
+            lgth[lgth.cumsum() >= lgth.sum()/2].irow(0)) # n50
+
+l = [collect(exp.ix[info]) for info in exp.index]
+d = DataFrame(l,columns=['kmer','cvCut','sum','min','max','mean','median','n50'])
+d
 
